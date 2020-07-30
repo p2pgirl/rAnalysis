@@ -1,0 +1,1085 @@
+```{r, echo=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+---
+title: ARABICA COFFEE QUALITY ANALYSIS
+author: Renee Cothern
+---
+========================================================
+
+***
+
+# Introduction to Dataset
+This analysis is on arabica coffee which accounts for 60% of the world's coffee 
+production.  The dataset contains measures of the quality of individual 
+coffee samples.
+
+
+### Dataset Source
+These datasets are gathered from Coffee Quality Institute (CQI) in January, 2018.
+Data website:  https://www.kaggle.com/volpatto/coffee-quality-database-from-cqi
+
+### References
+https://en.wikipedia.org/wiki/Coffea_arabica
+https://blog.hunterlab.com/blog/color-food-industry/spectrophotometric-color-evaluation-of-green-coffee-beans-for-optimal-quality-and-consistency/
+https://www.coffeechemistry.com/quality/cupping/cupping-fundamentals
+https://www.thirdwavecoffeeroasters.com/blogs/blog/what-is-speciality-coffee-and-how-is-it-graded
+
+***
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+
+# Load Needed packages
+
+# "echo" = FALSE prevents the code from displaying in the knitted HTML output. 
+# unless it makes sense for your report to show the code that 
+# generated a particular plot.
+
+# "message" and "warning" also set to FALSE for a clean flow
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(GGally)
+library(reshape2)
+library(RColorBrewer)
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+coffeedata <- read.csv('datasets_coffee_arabica_data.csv')
+
+```
+
+***
+
+## Getting Overall View of the Dataset
+The over goal is to review the dataset and see if I can discover
+some commonalities with low or high ranking coffee beans and make some 
+correlations as to the correct scenario for delicious coffee!
+
+**There are 1311 rows of data and 44 columns**
+
+```{r echo=FALSE, Info_about_data}
+dim(coffeedata)
+str(coffeedata)
+```
+
+**Changing Data to Eliminate Certain Columns**
+There are cetain columns that are not needed in my analysis either because there
+are too many empty values or because it's the same data twice or because it 
+doesn't really tell me much.  So I will change my dataset to remove those 
+columns to narrow things down.
+
+Now it's 24 columns.
+
+```{r echo=FALSE, narrow_data}
+#created a new variable to prepare to exclude some columns
+thesevars <- names(coffeedata) %in% c("Species", "Owner", "Lot.Number",
+                                      "ICO.Number", "Altitude",
+                                        "Company", "Producer", "Number.of.Bags",
+                                        "Bag.Weight", "In.Country.Partner",
+                                        "Grading.Date", "Owner.1", "Cupper.Points",
+                                        "Quakers", "Certification.Body",
+                                        "Certification.Address",
+                                      "Certification.Contact",
+                                        "unit_of_measurement", 
+                                        "altitude_low_meters",
+                                        "altitude_high_meters") 
+#creating a new dataset that is more narrow and relevant to my analysis
+coffeedata <- coffeedata[!thesevars]
+```
+
+***
+
+# Univariate Plots Section
+In this section I will be performing preliminary exploration of the dataset.
+I will run some summaries of the data, clean the data, and create some plots to understand
+the structure of my variables.
+
+## Cleaning up the Data to Prepare for Plotting
+
+```{r echo=FALSE, test_data}
+#Before I clean the data I'm going to create a testcopy of the data to play with
+#JUST to be safe!
+TESTCOPY<-data.frame(coffeedata)
+tracemem(TESTCOPY)==tracemem(coffeedata)
+untracemem(TESTCOPY)
+untracemem(coffeedata)
+```
+
+### Cleaning the farm
+I am interested in the farms, countries, and harvest year, but before I try to 
+plot that, I am curious as to the number of unique values.  
+
+There are 558 unique farm names, 
+There are 37 unique countries,  
+There are 47 unique harvest years, 
+There are 557 unique expiration dates.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, unique_values}
+#find out unique number of entries
+length(unique(coffeedata$Farm.Name))
+length(unique(coffeedata$Country.of.Origin))
+length(unique(coffeedata$Harvest.Year))
+length(unique(coffeedata$Expiration))
+
+```
+
+
+It's time to do some cleaning.  I'm noticing a lot of inconsistent data in 
+**Harvest.Year** that won't be good for plotting.  **Expiration** has string 
+dates, and I'd really like years in numbers.  In addition, I'd also like to 
+have NAs rather than blanks so I can filter them out later.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, table_values}
+#look at data to determine what to clean
+#table(coffeedata$Harvest.Year)
+#table(coffeedata$Expiration)
+#table(coffeedata$Country.of.Origin)
+
+#now change all blanks to NA for filtering future plots
+coffeedata[coffeedata==""] <- NA
+
+```
+
+Being that **Harvest.Year** in some cases had a range of year dates, like 
+2016-2017, and inconsistently, I'd like to just make the **Harvest.Year** the 
+*beginning* Harvest Year. So I'm going to change the column name to be 
+**Harvest.Year.Begin**.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  column_change}
+#changing harvest year column name to Harvest.Year.Begin to represent
+# the beginning year of the harvest and to eventually have numbers to work
+# with.
+names(coffeedata)[names(coffeedata) == "Harvest.Year"] <- "Harvest.Year.Begin"
+
+#change X to Sample.ID
+names(coffeedata)[names(coffeedata) == "X"] <- "Sample.ID"
+```
+
+The data is so inconsistent, that it's hard to find an automated formula that 
+minimizes my time.  So, being that the dataset is fairly small, I decided to 
+manually change all the value(s).
+```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_harvest.year}
+
+#changing harvest year data to numbers
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "08/09 crop"] <- "2008"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2009 - 2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2009/2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2009 / 2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Sept 2009 - April 2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2009-2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "23 July 2010 "] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2010-2011"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2011/2012"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2013/2014"] <- "2013"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2014/2015"] <- "2014"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2015/2016"] <- "2015"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2016 / 2017"] <- "2016"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2016/2017"] <- "2016"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "2017 / 2018"] <- "2017"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "1t/2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "1T/2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "3T/2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "4T/2010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "4T/10"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "4t/2010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "4t/2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "4T72010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "47/2010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Abril - Julio /"] <- ""
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Fall "] <- ""
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "March "] <- ""
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "mmm"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "August to December"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "January 2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "May-August"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Abril - Julio"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Abril - Julio /2011"] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "December 2009-March 2010"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "January Through April"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Mayo a Julio"] <- NA
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Spring 2011 in Colombia."] <- "2011"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "Fall 2009"] <- "2009"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "23 July 2010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "March 2010"] <- "2010"
+coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
+                              "TEST"] <- NA
+table(coffeedata$Harvest.Year.Begin)
+
+```
+
+**Expiration** I'd like to change to year, rather than month, day and year in 
+a string format.  Since the data was more consistent it was easier to clean.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_expiration}
+#created a new function!
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+#replace data with new info  
+coffeedata$Expiration <- substrRight(coffeedata$Expiration, 4)
+
+#looking at data, and I noticed one strange entry
+table(coffeedata$Expiration)
+subset(coffeedata, Expiration < "2000")
+
+#remove the value
+coffeedata$Expiration[coffeedata$Expiration < "2000"] <- NA
+
+
+```
+
+Now the year fields gets changed to number fields
+```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_type_change}
+#change fields to numeric for later plots
+coffeedata$Harvest.Year.Begin <- as.numeric(coffeedata$Harvest.Year.Begin)
+str(coffeedata$Harvest.Year.Begin)
+coffeedata$Expiration <- as.numeric(coffeedata$Expiration)
+str(coffeedata$Expiration)
+```
+
+***
+
+## Visualizations and stats preliminary investigation
+
+**Information about dataset**
+The dataset has 1311 observations.
+
+To get an overall summary of the data.  
+What stands out is that the Harvest Year for this dataset starts at 2008, and
+ends at 2018.  Also, most of the data is filled out, and the NAs really 
+are just with the timeframe variables.
+
+```{r echo=FALSE, Summary}
+summary(coffeedata)
+```
+
+Let's look at where the coffee comes from.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots1}
+ggplot (data = coffeedata, aes(x = forcats::fct_infreq(Country.of.Origin))) +
+  geom_bar () +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Country of Origin") +
+  ggtitle("Count of Observations by Country of Origin")
+
+```
+
+Most of the Arabica coffee in this dataset comes from Mexico.
+236 of the samples come from Mexico.  That's 18% of the coffee.
+
+```{r echo=FALSE, table_plots_1}
+table(coffeedata$Country.of.Origin)
+
+#grabbing the percentage
+MexicoOrigin <- subset(coffeedata, Country.of.Origin == "Mexico")
+MexicoOriginNumber <- nrow(MexicoOrigin)
+paste(round(100*(MexicoOriginNumber/1311), 2), "%", sep="")
+```
+
+Looking at Harvest Year from 2008 - 2018:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots2}
+ggplot (data = coffeedata, aes(x = Harvest.Year.Begin)) +
+  geom_histogram (binwidth = 1, color = 'black', fill = 'red') +
+  scale_x_continuous(breaks = c(2009:2017)) +
+  xlab("Harvest Year") +
+  ggtitle("Count by Year Coffee was Harvested")
+
+```
+
+The max amount of production in coffee appeared in 2012.  The outliers are
+2008 and 2018.  I'm assuming because the data collection occurred in the middle
+of those years.
+
+```{r echo=FALSE, table_plots_2}
+table(coffeedata$Harvest.Year.Begin)
+summary(coffeedata$Harvest.Year.Begin)
+```
+
+Looking at Expiration Dates - Most coffee is set to expire in 2013:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots3}
+p1 <- ggplot (data = coffeedata, aes(x = Expiration)) +
+  geom_histogram (color = 'black', fill = 'blue') +
+  scale_x_continuous(breaks = c(2011:2019)) +
+  xlab("Recorded Expiration of Coffee") +
+  ggtitle("Count of Expiration of Observations")
+
+p1
+
+```
+
+After faceting on harvest year, and knowing the majority of coffee production
+happened in 2012, it appears it expires 1 year later, which would make sense
+at 2013 being the most frequent expiration date.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots4}
+p1 +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Recorded Expiration of Coffee") +
+  facet_wrap(~Harvest.Year.Begin) +
+  ggtitle("Observation Count of Expiration for Individual Harvest Years")
+```
+
+The summary below seems to support that assumption of expiration dates. 
+
+```{r echo=FALSE, table_plots_3}
+by(coffeedata$Expiration, coffeedata$Harvest.Year.Begin, summary)
+```
+
+Looking at altitude averages.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots5}
+ggplot(aes(x = altitude_mean_meters),
+       data = coffeedata) +
+  geom_freqpoly() +
+  scale_x_continuous(limits = c(500, 2000), 
+                     breaks = c(500, 750, 1000, 1250, 1500, 1750, 2000)) +
+  xlab('Average Altitude per Observation in Meters')  +
+  ggtitle("Count of Average Altitude")
+
+```
+
+There was a very big outlier here in altitude, which makes me think it was a
+mistake.  Noting that, I scaled down my plot.  The median is a more reliable
+source of average altitude noting the strange outlier.
+
+The *median altitude* that coffee was grown in was **1311 meters**.  That's 
+**4,301 foot** elevation.
+
+```{r echo=FALSE, table_plots_4}
+summary(coffeedata$altitude_mean_meters)
+
+#conversion to feet!
+1311 * 3.28084
+```
+
+Beans are inspected for defects.  Category one defects would be things like rotten beans.  Category two defects are things like broken beans.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots6}
+
+p1 <- ggplot(aes(x = Category.One.Defects), data = coffeedata) +
+  geom_freqpoly(color="blue") +
+  scale_x_continuous(limits = c(1, 26)) +
+  xlab("Category One Defects - Bad Beans")
+  
+p2 <- ggplot(aes(x = Category.Two.Defects), data = coffeedata) +
+  geom_freqpoly(color="green")  +
+  scale_x_continuous(limits = c(1, 26)) + 
+  xlab("Category Two Defects - Damaged Beans")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+I noticed there were a lot more category two defects.  This makes sense because
+category one defects should be zero and category two defects should be less than
+5.
+
+I created another column called Quality.Standards.  This new variable will state TRUE if the beans have less than 0 category one defects, and less than 5 category two defects.
+
+```{r echo=FALSE, new_column_Kept.Beans}
+#In order for coffee to be kept it has to have the following below
+cond <- (coffeedata$Category.One.Defects < 1 & 
+           coffeedata$Category.Two.Defects < 5)
+
+#Create another column that indicates 
+coffeedata$Quality.Standards <- ifelse(cond, TRUE, FALSE)
+table(coffeedata$Quality.Standards)
+
+```
+
+Here is a plot that visually shows the result of the new column.
+
+```{r echo=FALSE, Univariate_Plots7}
+ggplot (data = coffeedata, aes(x = Quality.Standards)) +
+  geom_bar (color = 'black', fill = '#A52A2A') +
+  xlab("Were the Coffee Beans Inspections Considered Quality?") +
+  ggtitle("The Beans that Meet Quality Standards")
+```
+
+***
+
+# Univariate Analysis
+
+
+### What is the structure of your dataset?
+
+**There were 1311 rows of data and 44 columns initially.**
+However, many of those columns were eliminated. 
+```{r}
+dim(coffeedata)
+```
+
+
+*Quality Measure Meanings*
+10 best, 1 worst
+Scale by the SCAA (Speciality Coffee Association of America)
+Cupping is a process that involves roasting the coffee and simply brewing it by 
+adding hot water to the ground beans
+
+*Aroma: 
+  +Aromatic aspects when infused with water
+*Flavor
+  +Taste and aroma, mid tones of coffee, based on flavor wheel
+*Aftertaste
+  +Duration of positive flavor attributes of coffee
+*Acidity
+  +Brightness (higher number) or sourness of coffee
+*Body
+  +Heaviness perceived on the tongue
+*Balance
+  +Overall rating of coffee
+*Uniformity
+  +Consistency of taste
+*Cup Cleanliness
+  +Transparency in the cup, should be free of off-flavors and defects
+*Sweetness
+  +Subtle pleasant sweetness in coffee
+*Moisture
+  +Should have a moisture content of 8 to 12.5%.  Less/More will be low.
+*Defects: 
+  +Info: Primary (e.g. black beans, sour beans) or Secondary (e.g. broken beans)
+  +Primary: should have zero
+  +Secondary: should have less than five
+*SCAA Total Cup Points (100 point scale):  
+  +90-100 - Outstanding
+  +85-89.99 - Excellent
+  +80-84.99 - Very Good
+  +<80 - No scoring
+
+*Farm and Bean Data*
+*Country of Origin
+*Farm Name
+*Lot Number
+*Mill
+*Altitude
+*Region
+*Processing method
+*Variety:
+  +Type of arabica coffee
+*Color: 
+  +Grayish-blue, blue-green is most desirable, gradually dries in sun
+  +Green is middle of the road
+  +Green-brown scorched during drying or picked while under or over-ripe
+
+
+### What is/are the main feature(s) of interest in your dataset?
+
+This dataset contains qualtiy measurements that I have yet to explore.
+These ratings are per the Speciality Coffee Association of America and 
+are categorical tests to determine delicious coffee vs. not delicious.
+
+I am curious about delicious coffee and how it correlates to other variables such as altitude and defects.  I would like to have the formula down for excellent coffee!  I love coffee!
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+I know variety and processing of the individual beans also may will also be an important measure of quality beans.  I also think that perhaps the origins of the coffee might be an interesting investigation.
+
+### Did you create any new variables from existing variables in the dataset?
+
+I created a new variable called Quality.Standards.  If the beans have no category one defects and less than 5 category two defects, then they are considered quality beans. When they meet quality standards, it will be marked as "TRUE". 
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+I noticed that with mean altitude there was some pretty strange outliers, 
+one had a max of 190164 meters in altitude, which is impossible.
+I removed some columns from my dataset.  The reason was either it had no 
+relevance (such as Bag.Weight or Certification.Contact), or it had all the same data (Species), or had nearly no data in it.  I had to do some data cleaning especially with Harvest.Year.  That field had all sorts of different formats of dates, and some had no years at all. I also changed it to Harvest.Year.Begin because it had both ranges (I'm assuming for harvest years that start at the end of the year and carry to the next).  I also changed the Expiration date to be a year only rather than month day and year.
+
+***
+
+# Bivariate Plots Section
+
+## Evaluating Origins of Beans vs. Bean Processing with Good Coffee!
+
+### Here are the items I will be looking at:
+
+**Origins of beans** and how it effects quality. In other words, how does harvest year, country, and quality standards (bean defects) have a bearing on overall quality of the coffee per SCAA measurements?
+
+**Bean processing** and how it effects quality. In other words, how does
+processing method, variety of bean, and the moisture of the bean have a bearing on overall quality of the coffee per SCAA measurements?
+
+### Exploring Origins of Beans
+Now let's take a look at how all the *coffee origin* information:  Country.of.Origin, Harvest.Year.Begin, Quality.Standards and how that effects good coffee - which will be measured next to Total Cup Points.
+
+The overall quality of the coffee test is Total Cup Points (Total.Cup.Points) and is as follows:
+
+*SCAA Total Cup Points (100 point scale):  
+  +90-100 - Outstanding
+  +85-89.99 - Excellent
+  +80-84.99 - Very Good
+  +<80 - Below Grade
+  
+To help me in my analysis I'm going to create another column called *Total.Cup.Result*:  Outstanding, Excellent, Very Good, Below Grade.  I think it will add quick clarity and understanding to the visualizations.
+
+```{r echo=FALSE, total_cup_result_column}
+#Creating the conditions for the new column
+condOutstanding <- coffeedata$Total.Cup.Points >= 90
+condExcellent <- coffeedata$Total.Cup.Points < 90 & 
+  coffeedata$Total.Cup.Points >= 85
+condVeryGood <- coffeedata$Total.Cup.Points < 85 &
+  coffeedata$Total.Cup.Points >= 80
+
+#Create new column based on the conditions
+coffeedata$Total.Cup.Result <- ifelse(condVeryGood, 'Very Good', 'Below Grade')
+coffeedata$Total.Cup.Result <- ifelse(condExcellent, 'Excellent', 
+                                    coffeedata$Total.Cup.Result)
+coffeedata$Total.Cup.Result <- ifelse(condOutstanding, 'Outstanding', 
+                                    coffeedata$Total.Cup.Result)
+
+#Spot checking my new column - looks good!
+subset(coffeedata, Total.Cup.Result == "Excellent", select = c(Total.Cup.Points, Total.Cup.Result))
+
+```
+#### Correlation between Defects of Beans and Total Cup Points
+
+**Result:**  The correlations are rather low, however, the category two does show a slightly higher correlation with total cup points then category one.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots1}
+#Creating the data for the measure
+coffeedata_defects <- coffeedata[c('Category.One.Defects','Category.Two.Defects', 
+                      'Total.Cup.Points')]
+#correlation matrix
+cor(coffeedata_defects)
+```
+#### Country of Origin
+
+The *Total Cup Points by Country* plot below gives a quick visual as to which countries
+have not only the most coffee samples, but also which have higher total cup points.
+
+There is some overplotting and I'd like to be able to see the data better, so I produced a second plot where I limited my y axis to have the most common data which helps eliminate some of the ouliers as well.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot1}
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Country of Origin") +
+  ggtitle("Total Cup Points by Country")
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot2}
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
+  geom_point(alpha = .25, color = 'blue', shape = 4) +
+  ylim(70, 90) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Country of Origin") +
+  ggtitle("Total Cup Points by Country")
+```
+
+
+Looking at the below data, it's easier to see that Mexico, Columbia and Guatamala
+are the top producers.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, group_by_country}
+country_groups <- group_by(coffeedata, Country.of.Origin)
+#first is the data
+#second are the new variables he wants to create
+#the n function can only be used for summarise, and only for each group
+coffeedata.country_totalcuppoints <- summarise(country_groups,
+          total_cup_mean = mean(Total.Cup.Points),
+          total_cup__median = median(Total.Cup.Points),
+          total_cup_max = max(Total.Cup.Points),
+          n = n())
+
+coffeedata.country_totalcuppoints %>%
+  arrange(desc(n))
+
+```
+The below information shows the countries with the highest median of Total Cup Points.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, group_by_country2}
+
+coffeedata.country_totalcuppoints %>%
+  arrange(desc(total_cup__median))
+
+```
+  
+#### Harvest Year
+
+We already know that 2012 was the greatest production year for coffee (between 2008 and 2018)
+
+Which years appear to have the best total cup points?  We can see from below that the best total cup points is 2014.  2012 definitely produced the most coffee.  But most of the coffee production appeared below the mean line.  So, it appears 2014 was not only a good year for coffee production wise, but it created some good quality coffee!  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot3}
+
+ggplot(aes(x = Harvest.Year.Begin, y = Total.Cup.Points), data = coffeedata) + 
+  geom_point(alpha = .30) +
+  scale_x_continuous(limits = c(2008, 2018), breaks = seq(2008, 2018, 2)) +
+  ylim(75, 90) +
+  stat_summary(geom = 'line', fun = "mean") +
+  xlab("Harvest Year") +
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points by Year")
+
+```
+
+
+### Exploring Bean Type and Processing
+Now let's take a look at the *bean processing* information:  Variety, Moisture, Processing.Method
+
+Let's look how the moisture in the beans effects coffee tastes.  With the *moisture* measure, it should have a moisture content of  .08 (8%) to .12 (12%).  Less/More will be considered to dry/wet for coffee standards.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot4}
+
+ggplot(aes(x = Moisture, y = Total.Cup.Points), data = coffeedata) +
+  geom_line(color="steelblue", size = 2) +
+  coord_cartesian(ylim = c(60, 90))
+
+```
+
+When I first ran this, it has a low outlier.  So I zoomed in to the Total Cup Points that are from 60 - 80.  So I can get a better look.  I also added a line measurement to get a good look to see if there was a correlation to increased moisture and good tasting coffee.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot5}
+
+ggplot(aes(x = Moisture, y = Total.Cup.Points), data = coffeedata) +
+  geom_line(color="steelblue")  +
+  coord_cartesian(xlim = c(0, .2), ylim = c(60, 90)) +
+  geom_smooth() +
+  xlab("Moisture Measurement of Beans") +
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points Evaluation with Moisture Measurement")
+
+```
+
+From the moisture visualization, it appears there is almost no correlation between moisture and total cup points. I verified that with the correlation test below.  
+
+```{r echo=FALSE, Corr_Moisture}
+cor.test(coffeedata$Total.Cup.Points, coffeedata$Moisture)
+
+```
+By changing the visualization to a scatter plot and changing the alpha level, I could produce a sort of pseudo-heat map.  This gives me better idea of how moisture effects good coffee.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot6}
+
+ggplot(aes(x = Moisture, y = Total.Cup.Points), data = coffeedata) +
+  geom_point(alpha = 1/10, color = 'blue', shape = 2, position = position_jitter(h=0)) +
+  xlim(0, .2) +
+  ylim(60, 90) +
+  xlab("Moisture Measurement of Beans") +
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points Evaluation with Moisture Measurement")
+```
+
+According to the below and above information, the average moisture count is at about .08.  And the majority of the data falls between .09 and .12.  *So it appears that the best coffee exists between .10 and .12.*  It seems that moisture makes an impact, it can't be too much, and can't be too little.
+
+```{r echo=FALSE, Corr_Moisture_Summary}
+summary(coffeedata$Moisture)
+
+```
+
+Next, it's time to look at the variety of coffee.  I grouped the data together by Variety and then summarized the mean and median.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, summarize_variety}
+
+coffeedata.variety_totalcuppoints <- coffeedata %>%
+  group_by(Variety) %>%
+  summarise(total_cup_mean = mean(Total.Cup.Points),
+          total_cup_median = median(Total.Cup.Points),
+          n = n())
+
+
+head(coffeedata.variety_totalcuppoints)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot7}
+
+ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)), 
+        aes(x = Variety, y = total_cup_mean, group = 1)) +
+  geom_point (shape = 21, color = "black", fill = "red", size = 4) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Variety") +
+  ylab("Average Total Cup Points") +
+  ggtitle("Average Total Cup Points by Coffee Variety")
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot8}
+
+ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)), 
+        aes(x = Variety, y = total_cup_median, group = 1)) +
+  geom_point (shape = 21, color = "black", fill = "blue", size = 4) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Variety") +
+  ylab("Average Total Cup Points") +
+  ggtitle("Median Total Cup Points by Coffee Variety")
+
+```
+In terms of discovering *Variety*, I'm pretty pleased.  I can now tell just from these visualizations what are the three top tasting varieties of coffee beans. 
+
+1.  Ethiopian Heirlooms - Ethiopia
+2.  Sumatra Lintrong - Indonesia
+3.  SL34 - Mostly found in Kenya
+
+The visualization supports my finding that Ethiopia produces some of the best tasting coffee (rated number 3).  Kenya is just south of Ethiopia. 
+
+
+Processing method is the next item to look at.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, summarize_processing}
+
+coffeedata.process_totalcuppoints <- coffeedata %>%
+  group_by(Processing.Method) %>%
+  summarise(total_cup_mean = mean(Total.Cup.Points),
+          total_cup_median = median(Total.Cup.Points),
+          total_cup_max = max(Total.Cup.Points),
+          n = n())
+
+
+head(coffeedata.process_totalcuppoints)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot9}
+
+
+ggplot (data = subset(coffeedata.process_totalcuppoints, !is.na(Processing.Method)), 
+        aes(x = Processing.Method, y = total_cup_mean, group = 1)) +
+  geom_point (shape = 15, size = 5) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Processing Method") +
+  ylab("Average Total Cup Points") +
+  ggtitle("Average Total Cup Points by Processing Method")
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot10}
+
+ggplot (data = subset(coffeedata.process_totalcuppoints, !is.na(Processing.Method)), 
+        aes(x = Processing.Method, y = total_cup_max, group = 1)) +
+  geom_point (shape = 10, size = 5) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Processing Method") +
+  ylab("Max Total Cup Points") +
+  ggtitle("Max Total Cup Points by Processing Method")
+
+```
+
+Inspired by another coffee lover, I also included this data so you can get an idea of what countries use what methods!  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, country_processing}
+
+table(coffeedata$Country.of.Origin, coffeedata$Processing.Method)
+```
+
+On average, the *Processing Method* that produces the highest total cup points is the "Pulped natural/honey" method.
+
+**In case you are wondering:** 
+
+The ***pulped natural / honey*** process begin the drying process directly after de-pulping rather than undergoing fermentation to remove the mucilage. "Pulped natural" tends to have more fruit and fermented flavors because the bean has more time to interact with the natural sugars from the cherry as enzymes break down the mucilage around the bean. If producers however aren't careful about stirring and watching, funky flavors will emerge in the roasted coffee. 
+
+However, ***Washed / Wet*** coffee’s are known for their vibrant notes. Removing all of the cherry prior to drying allows the intrinsic flavors of the bean to shine without anything holding them back. Fruit notes are still found in washed coffees, however, fermented notes and berry notes are less common. 
+
+***Natural / Dry*** method involves drying coffee cherries either patios or raised beds in the sun.  This process only works in areas that are hot and dry and take to give the coffee a more fruity flavor.
+
+I guess it's a matter of taste!
+
+***
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+I noticed that the U.S. coffee was rated the best tasting, followed by Papua New Guinea.  Ethiopia was third and the best variety of coffee also was from Ethiopia (Kenya was just below it).  
+
+I expected to see more of a correlation, or at least an upward trending of moisture vs. total cup points where the more moisture the higher the cup points.  However, I instead noticed that there was more of a pattern with a range of data using the scatter plot that produced the best coffee.  It apparently can't be too wet or dry.
+
+For both variety and processing method, it was easier to see information when grouping the data and then looking at average, median and max.  On average, the processing that produces the highest total cup points is the "Pulped natural/honey" method. However the max total cup point was the "Washed/wet method". 
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+Observing total cup points by harvest there was an interesting relationship with the quality standards which is the bean inspection.  True indicates it passed quality standards for bean inspection.  The Total Cup Points were less for those that didn't pass quality standards.
+
+### What was the strongest relationship you found?
+
+The strongest relationship I found seemed to be the defects and total cup points. The lower quality standard of beans yields less delicious coffee.  Makes sense!
+
+
+***
+
+# Multivariate Plots Section
+
+Now it's time to look at the data a little more closely.  We'll be adding some additional variables to our plots as well as looking at individual SCAA tests.
+
+#### Harvest Year, Total Cup Points, Quality Standards
+The lines provide a good quick glance at where the averages lie for Total Cup Points for coffee that met quality standards and those who didn't.  It's interesting how the mean for total cup points plummeted for 2011.  My thought is because it had some very low outliers or incorrect data which pulled it down.  However, for that line to stay below the "met quality standards" is what I would expect. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot1}
+
+ggplot(aes(x = Harvest.Year.Begin, y = Total.Cup.Points, color = Quality.Standards), data = coffeedata) + 
+  geom_point(alpha = .30) +
+  scale_x_continuous(limits = c(2008, 2018), breaks = seq(2008, 2018, 2)) +
+  ylim(75, 90) +
+  stat_summary(geom = 'line', fun = "mean") +
+  xlab("Harvest Year") +
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points by Year")
+
+```
+
+Mexico was down low on the list of "excellent coffee" measured by total cup points despite being one of the highest producers.  Is that because they don't meet quality standards during the bean inspection process? Surprisingly no!  Most of their beans appear to meet inspection.  
+
+That brings a suspicion to mind that most bad tasting coffee may be more related to the variety or processing of the beans than the picking of the correct beans.  This supports the earlier plots I evaluated.  
+
+#### Country, Total Cup Points, Quality Standards
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot2}
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
+  geom_line(aes(color = Quality.Standards)) +
+  ylim(70, 90) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Country of Origin") +
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points by Country")
+
+```
+
+#### Total Cup Points, Quality Standards and Average Cup Point
+
+This plot shows that beans with higher quality standards do effect good coffee, but not by much.  However there are a lot of outliers in the true category.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot3}
+
+ggplot(aes(x = Quality.Standards, y = Total.Cup.Points),
+       data = coffeedata) + 
+  geom_boxplot() +
+  scale_y_continuous(limits = c(75, 90)) +
+  xlab("Quality Standards") +
+  ylab("Total Cup Points") +
+  stat_summary(fun = "mean", geom = "point") +
+  ggtitle("Total Cup Points and Quality Standards")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, country_subset}
+
+top_country_data <- subset(coffeedata, Country.of.Origin == "United States (Hawaii)"
+                           | Country.of.Origin == "Papua New Guinea"
+                           | Country.of.Origin == "Ethiopia"
+                           | Country.of.Origin == "Japan"
+                           | Country.of.Origin == "Kenya")
+
+```
+
+
+#### Top 5 Countries, Category One Defects, and Total Cup Result
+This supports the idea that the less defects the better the coffee to some degree.  But if you look at Category Two, you can see with the U.S. and Kenya that's not always the case.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot4}
+
+ggplot(top_country_data, aes(fill=Total.Cup.Result, y=Category.One.Defects, 
+                       x=Country.of.Origin)) + 
+    geom_bar(position="stack", stat="identity") +
+  ylim(0, 75) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Top 5 Countries with Best Coffee") +
+  ggtitle("Top Five Countries - Category One Defects")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot5}
+
+ggplot(top_country_data, aes(fill=Total.Cup.Result, y=Category.Two.Defects, 
+                       x=Country.of.Origin)) + 
+    geom_bar(position="stack", stat="identity") +
+  ylim(0, 75) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Top 5 Countries with Best Coffee") +
+  ggtitle("Top Five Countries - Category Two Defects")
+
+```
+
+#### Top 5 Countries, Category One Defects, and Total Cup Result
+Early on the processing method wasn't reported (see NA below).  Most of the top countries tend to favor either natural/dry or washed/wet with Japan picking pulped natural methods mostly.  Later Kenya changed to the washed/wet method.  The natural/dry is most effective in dryer climates.  The natural/dry methods are the coffees that tend to have stronger fruit notes. The washed/wet method will bring out the non fruit notes because the fruit is removed.  The change in processing could be because of weather, but may be because they wanted variety with the coffee beans.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot6}
+
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points, 
+           color = as.factor(Harvest.Year.Begin)), 
+       data = top_country_data) + 
+  geom_point(alpha = .30)  +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_fill_discrete(name = "Harvest Year") +
+  xlab("Countries") +
+  ylab("Total Cup Points") +
+  scale_colour_discrete("Harvest Year") +
+  ggtitle("Processing Methods of Top Countries") +
+  facet_wrap(~Processing.Method, ncol = 2)
+
+```
+
+#### Matrix of the Relationship of the Testing Data
+There are a variety of tests and measures that are used to determine total cup points.  The below matrix shows the correlation of all the testing measures.  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Corr_Matrix}
+#get columns for just testing data
+coffeemat <- coffeedata[, c(9:17)]
+head(coffeemat)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Corr_Matrix2}
+
+#corr matrix creation
+coffee_cormat <- cor(coffeemat)
+head(coffee_cormat)
+
+#melt it
+melted_coffeemat <- melt(coffee_cormat)
+head(melted_coffeemat)
+
+
+```
+
+These are all the items that go into the testing to determine the total cup points.  Uniformity is a manner of testing between coffee tastes, clean cup is how it looks so it make sense that those items aren't strongly correlated.  The others all have to do with taste, so I can see that they are all strongly correlated.  I am surprised by sweetness though.  
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot7}
+#plot it
+ggplot(data = melted_coffeemat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+I originally was thinking that defects didn't matter so much with overall total cup points, However, the more I investigated, the more it strengthened the idea that defects did negatively effect total cup points. 
+
+### Were there any interesting or surprising interactions between features?
+I found it interesting at the strong correlation in the testing that went into total cup points, and how they correlated with each other.  The "viewing" tests were not correlated with the other tests, which is what I would expect.
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+------
+
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_One}
+
+ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)), 
+        aes(x = Variety, y = total_cup_mean, group = 1)) +
+  theme_dark() +
+  geom_point (shape = 21, color = "black", fill = "red", size = 4, stroke = 1) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Variety") +
+  ylab("Average Total Cup Points") +
+  ggtitle("Average Total Cup Points by Coffee Variety")
+
+```
+
+### Description One
+
+The **Average Total Cup Points by Coffee Variety** give a quick look as to what types of variety of beans to look for when finding good coffee.  Higher on the scale for the variety shows the higher quality coffee.
+
+
+### Plot Two
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
+  geom_line(aes(color = Quality.Standards)) +
+  theme_dark() +
+  ylim(70, 90) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Country of Origin") +
+  ylab("Total Cup Points") +
+  scale_colour_discrete("Defect Free?") +
+  ggtitle("Total Cup Points by Country")
+
+```
+
+### Description Two
+
+The **Total Cup Points by Country** show not only which country has higher total cup points, but also demonstrates that defects in the coffee do effect the taste and which country tends to have fewer defects.  Even though when you buy coffee you won't necessarily know which beans had defects.  BUT it is useful to know, which countries tend to have less defects.  This will effect the taste of coffee.  For example, note that Ethiopian coffee had few defects.
+
+
+### Plot Three
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
+
+ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points, 
+           color = as.factor(Harvest.Year.Begin)), 
+       data = top_country_data) + 
+  geom_point(alpha = .40, size=2)  +
+  theme_dark() +
+  theme(axis.text.x = element_text(angle = 90),
+        legend.title = element_blank()) +
+  xlab("Countries") +
+  ylab("Total Cup Points") +
+  scale_fill_discrete(name = "Dose") +
+  ggtitle("Processing Methods of Top Countries") +
+  facet_wrap(~Processing.Method, ncol = 2) +
+  scale_color_brewer(type='Seq', palette='YlOrRd', na.value="Black")
+
+```
+
+### Description Three
+
+The **Processing Method of Top Countries** show all the different processing methods.  The processing methods are all a matter of taste.  For example, if you prefer a fruity coffee then you'd lean toward a coffee that uses the Natural/Dry method where the fruit dries on the bean.  It also shows the Harvest Year that those processes occurred.
+
+------
+
+
+# Reflection
+This dataset had 1311 observations. 
+
+Initially I noticed there wasn't much of a correlation between defects and good tasting coffee as well as moisture and good tasting coffee.  But on more careful observation, I realized that when I compared the total cup points with country, and then added the third variable I created, quality standards, you could see that quality standards does effect the taste of coffee.
+
+Also, I noticed that with moisture, there was no correlation from a numbers aspect.  However if you look at it on the plot, good coffee occurs at a certain range of moisture.
+
+This makes me realize that processing makes an impact on flavor of coffee more than I initially thought.  However how is one to really know what processing is used?  So, that's where origins and patterns come in to play.  The top five "total cup point on average" countries tend to be:  1. United States 2. Papua New Guinea, 3. Ethiopia, 4. Japan and 5. Kenya.  It's easy to say that United States has the best coffee, but I'm not sure I agree.
+
+United States coffee has a lot of defects, but Ethiopia had the max total coffee points.  Also the top variety of coffee was a Ethiopian variety.  It leads me to believe that Ethiopian coffee is the true hero.  So what about Papua New Guinea?  Wasn't that second?  Yes.  But, I also noticed a lot of their data reporting was blank, so it's kind of an unknown.  However, you can't ignore the fact that taste tests show it is on average the second best tasting coffee.  However, without consistent data you can make predictions for the future.
+
+Also, it is a matter of taste and opinion. For example those that process with the Natural/Dry method will have less of a fruity taste.  
+
+One future work on this dataset would be to fill in a lot of the empty data.  Also a lot of items such as Farm, Mill, and color of bean were missing, which may have made a big impact on how to find good coffee.
