@@ -5,6 +5,10 @@ knitr::opts_chunk$set(error = TRUE)
 ---
 title: ARABICA COFFEE QUALITY ANALYSIS
 author: Renee Cothern
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 ========================================================
 
@@ -28,7 +32,7 @@ https://www.thirdwavecoffeeroasters.com/blogs/blog/what-is-speciality-coffee-and
 
 ***
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Packages}
 
 # Load Needed packages
 
@@ -75,7 +79,7 @@ columns to narrow things down.
 
 Now it's 24 columns.
 
-```{r echo=FALSE, narrow_data}
+```{r echo=FALSE, Narrow_data}
 #created a new variable to prepare to exclude some columns
 thesevars <- names(coffeedata) %in% c("Species", "Owner", "Lot.Number",
                                       "ICO.Number", "Altitude",
@@ -101,7 +105,7 @@ the structure of my variables.
 
 ## Cleaning up the Data to Prepare for Plotting
 
-```{r echo=FALSE, test_data}
+```{r echo=FALSE, Test_data}
 #Before I clean the data I'm going to create a testcopy of the data to play with
 #JUST to be safe!
 TESTCOPY<-data.frame(coffeedata)
@@ -119,7 +123,7 @@ There are 37 unique countries,
 There are 47 unique harvest years, 
 There are 557 unique expiration dates.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, unique_values}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Unique_values_eval}
 #find out unique number of entries
 length(unique(coffeedata$Farm.Name))
 length(unique(coffeedata$Country.of.Origin))
@@ -134,7 +138,7 @@ It's time to do some cleaning.  I'm noticing a lot of inconsistent data in
 dates, and I'd really like years in numbers.  In addition, I'd also like to 
 have NAs rather than blanks so I can filter them out later.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, table_values}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Table_values_eval}
 #look at data to determine what to clean
 #table(coffeedata$Harvest.Year)
 #table(coffeedata$Expiration)
@@ -150,7 +154,7 @@ Being that **Harvest.Year** in some cases had a range of year dates, like
 *beginning* Harvest Year. So I'm going to change the column name to be 
 **Harvest.Year.Begin**.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE,  column_change}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Column_change_eval}
 #changing harvest year column name to Harvest.Year.Begin to represent
 # the beginning year of the harvest and to eventually have numbers to work
 # with.
@@ -163,7 +167,7 @@ names(coffeedata)[names(coffeedata) == "X"] <- "Sample.ID"
 The data is so inconsistent, that it's hard to find an automated formula that 
 minimizes my time.  So, being that the dataset is fairly small, I decided to 
 manually change all the value(s).
-```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_harvest.year}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Clean_data_harvest.year}
 
 #changing harvest year data to numbers
 coffeedata$Harvest.Year.Begin[coffeedata$Harvest.Year.Begin==
@@ -255,7 +259,7 @@ table(coffeedata$Harvest.Year.Begin)
 **Expiration** I'd like to change to year, rather than month, day and year in 
 a string format.  Since the data was more consistent it was easier to clean.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_expiration}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Clean_data_expiration}
 #created a new function!
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
@@ -275,7 +279,7 @@ coffeedata$Expiration[coffeedata$Expiration < "2000"] <- NA
 ```
 
 Now the year fields gets changed to number fields
-```{r echo=FALSE, message=FALSE, warning=FALSE, clean_data_type_change}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Clean_data_type_change}
 #change fields to numeric for later plots
 coffeedata$Harvest.Year.Begin <- as.numeric(coffeedata$Harvest.Year.Begin)
 str(coffeedata$Harvest.Year.Begin)
@@ -295,7 +299,7 @@ What stands out is that the Harvest Year for this dataset starts at 2008, and
 ends at 2018.  Also, most of the data is filled out, and the NAs really 
 are just with the timeframe variables.
 
-```{r echo=FALSE, Summary}
+```{r echo=FALSE, Summary_data}
 summary(coffeedata)
 ```
 
@@ -313,7 +317,7 @@ ggplot (data = coffeedata, aes(x = forcats::fct_infreq(Country.of.Origin))) +
 Most of the Arabica coffee in this dataset comes from Mexico.
 236 of the samples come from Mexico.  That's 18% of the coffee.
 
-```{r echo=FALSE, table_plots_1}
+```{r echo=FALSE, Table_country_info}
 table(coffeedata$Country.of.Origin)
 
 #grabbing the percentage
@@ -337,7 +341,7 @@ The max amount of production in coffee appeared in 2012.  The outliers are
 2008 and 2018.  I'm assuming because the data collection occurred in the middle
 of those years.
 
-```{r echo=FALSE, table_plots_2}
+```{r echo=FALSE, Table_HarvestYr_Summary}
 table(coffeedata$Harvest.Year.Begin)
 summary(coffeedata$Harvest.Year.Begin)
 ```
@@ -345,9 +349,9 @@ summary(coffeedata$Harvest.Year.Begin)
 Looking at Expiration Dates - Most coffee is set to expire in 2013:
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots3}
-p1 <- ggplot (data = coffeedata, aes(x = Expiration)) +
-  geom_histogram (color = 'black', fill = 'blue') +
-  scale_x_continuous(breaks = c(2011:2019)) +
+
+p1 <- ggplot (data = coffeedata, aes(x = factor(Expiration))) +
+  geom_bar (color = 'black', fill = 'blue') +
   xlab("Recorded Expiration of Coffee") +
   ggtitle("Count of Expiration of Observations")
 
@@ -369,7 +373,7 @@ p1 +
 
 The summary below seems to support that assumption of expiration dates. 
 
-```{r echo=FALSE, table_plots_3}
+```{r echo=FALSE, Table_Expiration_byYr}
 by(coffeedata$Expiration, coffeedata$Harvest.Year.Begin, summary)
 ```
 
@@ -393,7 +397,7 @@ source of average altitude noting the strange outlier.
 The *median altitude* that coffee was grown in was **1311 meters**.  That's 
 **4,301 foot** elevation.
 
-```{r echo=FALSE, table_plots_4}
+```{r echo=FALSE, Mean_Altitude_Ft}
 summary(coffeedata$altitude_mean_meters)
 
 #conversion to feet!
@@ -423,7 +427,7 @@ category one defects should be zero and category two defects should be less than
 
 I created another column called Quality.Standards.  This new variable will state TRUE if the beans have less than 0 category one defects, and less than 5 category two defects.
 
-```{r echo=FALSE, new_column_Kept.Beans}
+```{r echo=FALSE, New_column_Kept.Beans}
 #In order for coffee to be kept it has to have the following below
 cond <- (coffeedata$Category.One.Defects < 1 & 
            coffeedata$Category.Two.Defects < 5)
@@ -558,7 +562,7 @@ The overall quality of the coffee test is Total Cup Points (Total.Cup.Points) an
   
 To help me in my analysis I'm going to create another column called *Total.Cup.Result*:  Outstanding, Excellent, Very Good, Below Grade.  I think it will add quick clarity and understanding to the visualizations.
 
-```{r echo=FALSE, total_cup_result_column}
+```{r echo=FALSE, Total_cup_result_column}
 #Creating the conditions for the new column
 condOutstanding <- coffeedata$Total.Cup.Points >= 90
 condExcellent <- coffeedata$Total.Cup.Points < 90 & 
@@ -581,7 +585,7 @@ subset(coffeedata, Total.Cup.Result == "Excellent", select = c(Total.Cup.Points,
 
 **Result:**  The correlations are rather low, however, the category two does show a slightly higher correlation with total cup points then category one.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots1}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Corr_Defects_Categories}
 #Creating the data for the measure
 coffeedata_defects <- coffeedata[c('Category.One.Defects','Category.Two.Defects', 
                       'Total.Cup.Points')]
@@ -617,7 +621,7 @@ ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
 Looking at the below data, it's easier to see that Mexico, Columbia and Guatamala
 are the top producers.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, group_by_country}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Group_by_country}
 country_groups <- group_by(coffeedata, Country.of.Origin)
 #first is the data
 #second are the new variables he wants to create
@@ -634,7 +638,7 @@ coffeedata.country_totalcuppoints %>%
 ```
 The below information shows the countries with the highest median of Total Cup Points.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, group_by_country2}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Group_by_country2}
 
 coffeedata.country_totalcuppoints %>%
   arrange(desc(total_cup__median))
@@ -741,6 +745,7 @@ ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)),
   ggtitle("Average Total Cup Points by Coffee Variety")
 
 ```
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot8}
 
 ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)), 
@@ -752,6 +757,7 @@ ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)),
   ggtitle("Median Total Cup Points by Coffee Variety")
 
 ```
+
 In terms of discovering *Variety*, I'm pretty pleased.  I can now tell just from these visualizations what are the three top tasting varieties of coffee beans. 
 
 1.  Ethiopian Heirlooms - Ethiopia
@@ -803,7 +809,7 @@ ggplot (data = subset(coffeedata.process_totalcuppoints, !is.na(Processing.Metho
 
 Inspired by another coffee lover, I also included this data so you can get an idea of what countries use what methods!  
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, country_processing}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Country_process_method}
 
 table(coffeedata$Country.of.Origin, coffeedata$Processing.Method)
 ```
@@ -851,7 +857,7 @@ Now it's time to look at the data a little more closely.  We'll be adding some a
 #### Harvest Year, Total Cup Points, Quality Standards
 The lines provide a good quick glance at where the averages lie for Total Cup Points for coffee that met quality standards and those who didn't.  It's interesting how the mean for total cup points plummeted for 2011.  My thought is because it had some very low outliers or incorrect data which pulled it down.  However, for that line to stay below the "met quality standards" is what I would expect. 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot1}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot1}
 
 ggplot(aes(x = Harvest.Year.Begin, y = Total.Cup.Points, color = Quality.Standards), data = coffeedata) + 
   geom_point(alpha = .30) +
@@ -870,7 +876,7 @@ That brings a suspicion to mind that most bad tasting coffee may be more related
 
 #### Country, Total Cup Points, Quality Standards
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot2}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot2}
 
 ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
   geom_line(aes(color = Quality.Standards)) +
@@ -886,7 +892,7 @@ ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
 
 This plot shows that beans with higher quality standards do effect good coffee, but not by much.  However there are a lot of outliers in the true category.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot3}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot3}
 
 ggplot(aes(x = Quality.Standards, y = Total.Cup.Points),
        data = coffeedata) + 
@@ -899,7 +905,7 @@ ggplot(aes(x = Quality.Standards, y = Total.Cup.Points),
 
 ```
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, country_subset}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Country_subset}
 
 top_country_data <- subset(coffeedata, Country.of.Origin == "United States (Hawaii)"
                            | Country.of.Origin == "Papua New Guinea"
@@ -913,7 +919,7 @@ top_country_data <- subset(coffeedata, Country.of.Origin == "United States (Hawa
 #### Top 5 Countries, Category One Defects, and Total Cup Result
 This supports the idea that the less defects the better the coffee to some degree.  But if you look at Category Two, you can see with the U.S. and Kenya that's not always the case.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot4}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot4}
 
 ggplot(top_country_data, aes(fill=Total.Cup.Result, y=Category.One.Defects, 
                        x=Country.of.Origin)) + 
@@ -925,7 +931,7 @@ ggplot(top_country_data, aes(fill=Total.Cup.Result, y=Category.One.Defects,
 
 ```
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate_Plot5}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot5}
 
 ggplot(top_country_data, aes(fill=Total.Cup.Result, y=Category.Two.Defects, 
                        x=Country.of.Origin)) + 
@@ -946,7 +952,7 @@ Early on the processing method wasn't reported (see NA below).  Most of the top 
 ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points, 
            color = as.factor(Harvest.Year.Begin)), 
        data = top_country_data) + 
-  geom_point(alpha = .30)  +
+  geom_jitter(alpha = .30)  +
   theme(axis.text.x = element_text(angle = 90)) +
   scale_fill_discrete(name = "Harvest Year") +
   xlab("Countries") +
@@ -960,9 +966,13 @@ ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points,
 #### Matrix of the Relationship of the Testing Data
 There are a variety of tests and measures that are used to determine total cup points.  The below matrix shows the correlation of all the testing measures.  
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, Corr_Matrix}
+```{r echo=FALSE, message=FALSE, warning=FALSE, Corr_Matrix_tests}
 #get columns for just testing data
-coffeemat <- coffeedata[, c(9:17)]
+
+firstcol = which(colnames(coffeedata)=="Aroma")
+lastcol = which(colnames(coffeedata)=="Sweetness")
+coffeemat <- coffeedata[, c(firstcol:lastcol)]
+
 head(coffeemat)
 ```
 
@@ -1049,7 +1059,7 @@ The **Total Cup Points by Country** show not only which country has higher total
 ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points, 
            color = as.factor(Harvest.Year.Begin)), 
        data = top_country_data) + 
-  geom_point(alpha = .40, size=2)  +
+  geom_jitter(alpha = .40, size=2)  +
   theme_dark() +
   theme(axis.text.x = element_text(angle = 90),
         legend.title = element_blank()) +
