@@ -532,9 +532,12 @@ I created a new variable called Quality.Standards.  If the beans have no categor
 ### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
 
 I noticed that with mean altitude there was some pretty strange outliers, 
-one had a max of 190164 meters in altitude, which is impossible.
+one had a max of 190164 meters in altitude, which is impossible.  I knew altitude wasn't going to be an ongoing factor in the rest of my analysis so I chose not to remove it at this time.
+
 I removed some columns from my dataset.  The reason was either it had no 
-relevance (such as Bag.Weight or Certification.Contact), or it had all the same data (Species), or had nearly no data in it.  I had to do some data cleaning especially with Harvest.Year.  That field had all sorts of different formats of dates, and some had no years at all. I also changed it to Harvest.Year.Begin because it had both ranges (I'm assuming for harvest years that start at the end of the year and carry to the next).  I also changed the Expiration date to be a year only rather than month day and year.
+relevance (such as Bag.Weight or Certification.Contact), or it had all the same data (Species), or had nearly no data in it.  
+
+I had to do some data cleaning especially with Harvest.Year.  That field had all sorts of different formats of dates, and some had no years at all. I also changed it to Harvest.Year.Begin because it had both ranges (I'm assuming for harvest years that start at the end of the year and carry to the next).  I also changed the Expiration date to be a year only rather than month day and year.
 
 ***
 
@@ -597,20 +600,25 @@ cor(coffeedata_defects)
 The *Total Cup Points by Country* plot below gives a quick visual as to which countries
 have not only the most coffee samples, but also which have higher total cup points.
 
-There is some overplotting and I'd like to be able to see the data better, so I produced a second plot where I limited my y axis to have the most common data which helps eliminate some of the ouliers as well.
+There are whole lot of *outliers* in the total cup points. While recognizing that outliers can distort statistical analysis, in this case I feel the outliers can be very informative about my subject-area of coffee being that coffee tasting results is so subjective. So, instead of removing the outliers, I chose to limit my x-axis and y-axis to help better visualize what's going on, and I will compare median vs. mean to determine what would be a better measurement of "middle of the road" in future measurements.
+
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot1}
 
-ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
-  geom_point() +
+ggplot(data = coffeedata, aes(x = Country.of.Origin, y = Total.Cup.Points)) + 
+               geom_boxplot(alpha = 0.2, color = 'red' ) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylim(70, 90) +
   theme(axis.text.x = element_text(angle = 90)) +
   xlab("Country of Origin") +
-  ggtitle("Total Cup Points by Country")
+  ylab("Total Cup Points") +
+  ggtitle("Total Cup Points by Country - Mapping of Outliers")
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot2}
 
 ggplot(aes(x = Country.of.Origin, y = Total.Cup.Points), data = coffeedata) +
-  geom_point(alpha = .25, color = 'blue', shape = 4) +
+  geom_jitter(alpha = .3, color = 'blue', shape = 4) +
+  geom_boxplot(alpha = 0.1, color = 'red' ) +
   ylim(70, 90) +
   theme(axis.text.x = element_text(angle = 90)) +
   xlab("Country of Origin") +
@@ -654,7 +662,7 @@ Which years appear to have the best total cup points?  We can see from below tha
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot3}
 
 ggplot(aes(x = Harvest.Year.Begin, y = Total.Cup.Points), data = coffeedata) + 
-  geom_point(alpha = .30) +
+  geom_jitter(alpha = .20) +
   scale_x_continuous(limits = c(2008, 2018), breaks = seq(2008, 2018, 2)) +
   ylim(75, 90) +
   stat_summary(geom = 'line', fun = "mean") +
@@ -703,7 +711,7 @@ By changing the visualization to a scatter plot and changing the alpha level, I 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plot6}
 
 ggplot(aes(x = Moisture, y = Total.Cup.Points), data = coffeedata) +
-  geom_point(alpha = 1/10, color = 'blue', shape = 2, position = position_jitter(h=0)) +
+  geom_jitter(alpha = 1/10, color = 'blue', shape = 2, position = position_jitter(h=0)) +
   xlim(0, .2) +
   ylim(60, 90) +
   xlab("Moisture Measurement of Beans") +
@@ -843,6 +851,7 @@ For both variety and processing method, it was easier to see information when gr
 
 Observing total cup points by harvest there was an interesting relationship with the quality standards which is the bean inspection.  True indicates it passed quality standards for bean inspection.  The Total Cup Points were less for those that didn't pass quality standards.
 
+
 ### What was the strongest relationship you found?
 
 The strongest relationship I found seemed to be the defects and total cup points. The lower quality standard of beans yields less delicious coffee.  Makes sense!
@@ -860,7 +869,7 @@ The lines provide a good quick glance at where the averages lie for Total Cup Po
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot1}
 
 ggplot(aes(x = Harvest.Year.Begin, y = Total.Cup.Points, color = Quality.Standards), data = coffeedata) + 
-  geom_point(alpha = .30) +
+  geom_jitter(alpha = .30) +
   scale_x_continuous(limits = c(2008, 2018), breaks = seq(2008, 2018, 2)) +
   ylim(75, 90) +
   stat_summary(geom = 'line', fun = "mean") +
@@ -981,16 +990,14 @@ head(coffeemat)
 
 #corr matrix creation
 coffee_cormat <- cor(coffeemat)
-head(coffee_cormat)
 
 #melt it
 melted_coffeemat <- melt(coffee_cormat)
-head(melted_coffeemat)
-
 
 ```
 
-These are all the items that go into the testing to determine the total cup points.  Uniformity is a manner of testing between coffee tastes, clean cup is how it looks so it make sense that those items aren't strongly correlated.  The others all have to do with taste, so I can see that they are all strongly correlated.  I am surprised by sweetness though.  
+These are all the items that go into the testing to determine the total cup points.  Uniformity is a manner of testing between coffee tastes, clean cup is how it looks so it make sense that those items aren't strongly correlated.  The others all have to do with taste, so I can see that they are all strongly correlated.  I am surprised by sweetness though.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plot7}
 #plot it
 ggplot(data = melted_coffeemat, aes(x=Var1, y=Var2, fill=value)) + 
@@ -1030,7 +1037,7 @@ ggplot (data = subset(coffeedata.variety_totalcuppoints, !is.na(Variety)),
 
 ### Description One
 
-The **Average Total Cup Points by Coffee Variety** give a quick look as to what types of variety of beans to look for when finding good coffee.  Higher on the scale for the variety shows the higher quality coffee.
+The **Average Total Cup Points by Coffee Variety** give a quick look as to what types of variety of beans to look for when finding good coffee.  Higher on the scale for the variety shows the higher quality coffee.  I found the results didn't differ much using the median.
 
 
 ### Plot Two
