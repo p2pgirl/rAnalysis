@@ -454,7 +454,7 @@ ggplot (data = coffeedata, aes(x = Quality.Standards)) +
 # Univariate Analysis
 
 
-### What is the structure of your dataset?
+### Dataset Structure
 
 **There were 1311 rows of data and 44 columns initially.**
 However, many of those columns were eliminated. 
@@ -515,7 +515,7 @@ adding hot water to the ground beans
   +Green-brown scorched during drying or picked while under or over-ripe
 
 
-### What is/are the main feature(s) of interest in your dataset?
+### Main Features
 
 This dataset contains qualtiy measurements that I have yet to explore.
 These ratings are per the Speciality Coffee Association of America and 
@@ -523,15 +523,11 @@ are categorical tests to determine delicious coffee vs. not delicious.
 
 I am curious about delicious coffee and how it correlates to other variables such as altitude and defects.  I would like to have the formula down for excellent coffee!  I love coffee!
 
-### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+### Features of Interest
 
 I know variety and processing of the individual beans also may will also be an important measure of quality beans.  I also think that perhaps the origins of the coffee might be an interesting investigation.
 
-### Did you create any new variables from existing variables in the dataset?
-
 I created a new variable called Quality.Standards.  If the beans have no category one defects and less than 5 category two defects, then they are considered quality beans. When they meet quality standards, it will be marked as "TRUE". 
-
-### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
 
 I noticed that with mean altitude there was some pretty strange outliers, 
 one had a max of 190164 meters in altitude, which is impossible.  I knew altitude wasn't going to be an ongoing factor in the rest of my analysis so I chose not to remove it at this time.
@@ -841,7 +837,7 @@ I guess it's a matter of taste!
 # Bivariate Analysis
 
 
-### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+### Observed Relationships
 
 I noticed that the U.S. coffee was rated the best tasting, followed by Papua New Guinea.  Ethiopia was third and the best variety of coffee also was from Ethiopia (Kenya was just below it).  
 
@@ -849,12 +845,7 @@ I expected to see more of a correlation, or at least an upward trending of moist
 
 For both variety and processing method, it was easier to see information when grouping the data and then looking at average, median and max.  On average, the processing that produces the highest total cup points is the "Pulped natural/honey" method. However the max total cup point was the "Washed/wet method". 
 
-### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
-
 Observing total cup points by harvest there was an interesting relationship with the quality standards which is the bean inspection.  True indicates it passed quality standards for bean inspection.  The Total Cup Points were less for those that didn't pass quality standards.
-
-
-### What was the strongest relationship you found?
 
 The strongest relationship I found seemed to be the defects and total cup points. The lower quality standard of beans yields less delicious coffee.  Makes sense!
 
@@ -1010,13 +1001,11 @@ ggplot(data = melted_coffeemat, aes(x=Var1, y=Var2, fill=value)) +
 
 # Multivariate Analysis
 
-### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+### Observed Relationship
 I originally was thinking that defects didn't matter so much with overall total cup points, However, the more I investigated, the more it strengthened the idea that defects did negatively effect total cup points. 
 
-### Were there any interesting or surprising interactions between features?
 I found it interesting at the strong correlation in the testing that went into total cup points, and how they correlated with each other.  The "viewing" tests were not correlated with the other tests, which is what I would expect.
 
-### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
 
 ------
 
